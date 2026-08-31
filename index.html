@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minesweeper</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game">
+    <h1>Minesweeper</h1>
+
+    <section class="controls" aria-label="Game controls">
+      <label for="difficulty">Difficulty</label>
+      <select id="difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+      <button id="new-game" type="button">New Game</button>
+    </section>
+
+    <section class="status" aria-live="polite">
+      <span>Mines: <strong id="mine-count">0</strong></span>
+      <span>Time: <strong id="timer">0</strong></span>
+    </section>
+
+    <div id="message" class="message">Click a cell to start.</div>
+    <div id="board" class="board" role="grid" aria-label="Minesweeper board"></div>
+    <p class="help">Left-click to reveal. Right-click to flag.</p>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
