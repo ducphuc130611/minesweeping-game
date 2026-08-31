@@ -9,7 +9,9 @@ const difficultyElement = document.getElementById('difficulty');
 const newGameButton = document.getElementById('new-game');
 const mineCountElement = document.getElementById('mine-count');
 const timerElement = document.getElementById('timer');
+const bestTimeElement = document.getElementById('best-time');
 const messageElement = document.getElementById('message');
+const themeToggle = document.getElementById('theme-toggle');
 
 let rows = 9;
 let cols = 9;
@@ -23,15 +25,7 @@ let seconds = 0;
 let timerId = null;
 
 function createCell(row, col) {
-  return {
-    row,
-    col,
-    mine: false,
-    revealed: false,
-    flagged: false,
-    adjacent: 0,
-    element: null
-  };
+  return { row, col, mine: false, revealed: false, flagged: false, adjacent: 0, element: null };
 }
 
 function shuffle(array) {
@@ -57,13 +51,11 @@ function buildBoard() {
       button.type = 'button';
       button.setAttribute('role', 'gridcell');
       button.setAttribute('aria-label', `Row ${row + 1}, column ${col + 1}`);
-
       button.addEventListener('click', () => reveal(row, col));
       button.addEventListener('contextmenu', (event) => {
         event.preventDefault();
         toggleFlag(row, col);
       });
-
       cells[row][col].element = button;
       boardElement.appendChild(button);
     }
@@ -77,47 +69,27 @@ function neighbors(row, col) {
       if (dr === 0 && dc === 0) continue;
       const r = row + dr;
       const c = col + dc;
-      if (r >= 0 && r < rows && c >= 0 && c < cols) {
-        result.push(cells[r][c]);
-      }
+      if (r >= 0 && r < rows && c >= 0 && c < cols) result.push(cells[r][c]);
     }
   }
   return result;
 }
 
 function placeMines(firstRow, firstCol) {
-  const forbidden = new Set();
-  forbidden.add(`${firstRow},${firstCol}`);
+  const forbidden = new Set([`${firstRow},${firstCol}`]);
+  neighbors(firstRow, firstCol).forEach((cell) => forbidden.add(`${cell.row},${cell.col}`));
 
-  neighbors(firstRow, firstCol).forEach((cell) => {
-    forbidden.add(`${cell.row},${cell.col}`);
-  });
-
-  let candidates = [];
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      if (!forbidden.has(`${row},${col}`)) {
-        candidates.push(cells[row][col]);
-      }
-    }
-  }
-
-  // Very small boards may not have enough cells outside the first-click area.
+  let candidates = cells.flat().filter((cell) => !forbidden.has(`${cell.row},${cell.col}`));
   if (candidates.length < mineTotal) {
     candidates = cells.flat().filter((cell) => !(cell.row === firstRow && cell.col === firstCol));
   }
 
   shuffle(candidates);
-  for (let i = 0; i < mineTotal; i++) {
-    candidates[i].mine = true;
-  }
+  for (let i = 0; i < mineTotal; i++) candidates[i].mine = true;
 
-  for (const row of cells) {
-    for (const cell of row) {
-      cell.adjacent = neighbors(cell.row, cell.col)
-        .filter((neighbor) => neighbor.mine).length;
-    }
-  }
+  cells.flat().forEach((cell) => {
+    cell.adjacent = neighbors(cell.row, cell.col).filter((neighbor) => neighbor.mine).length;
+  });
 }
 
 function startTimer() {
@@ -137,6 +109,25 @@ function stopTimer() {
 
 function updateMineCounter() {
   mineCountElement.textContent = Math.max(0, mineTotal - flags);
+}
+
+function getBestTime() {
+  const value = localStorage.getItem(`minesweeper-best-${difficultyElement.value}`);
+  return value === null ? null : Number(value);
+}
+
+function updateBestTime() {
+  const best = getBestTime();
+  bestTimeElement.textContent = best === null ? '—' : `${best}s`;
+}
+
+function saveBestTime() {
+  const best = getBestTime();
+  if (best === null || seconds < best) {
+    localStorage.setItem(`minesweeper-best-${difficultyElement.value}`, String(seconds));
+    return true;
+  }
+  return false;
 }
 
 function renderCell(cell) {
@@ -173,7 +164,14 @@ function reveal(row, col) {
   if (gameOver) return;
 
   const cell = cells[row][col];
-  if (cell.revealed || cell.flagged) return;
+  if (cell.flagged) return;
+
+  // Chording: clicking a revealed number opens its unflagged neighbors when
+  // the number of adjacent flags matches the number shown.
+  if (cell.revealed) {
+    chord(cell);
+    return;
+  }
 
   if (!started) {
     started = true;
@@ -193,6 +191,27 @@ function reveal(row, col) {
   checkWin();
 }
 
+function chord(cell) {
+  if (!started || cell.adjacent === 0) return;
+
+  const around = neighbors(cell.row, cell.col);
+  const flagCount = around.filter((neighbor) => neighbor.flagged).length;
+  if (flagCount !== cell.adjacent) return;
+
+  for (const neighbor of around) {
+    if (!neighbor.flagged && !neighbor.revealed) {
+      if (neighbor.mine) {
+        neighbor.revealed = true;
+        renderCell(neighbor);
+        loseGame();
+        return;
+      }
+      floodReveal(neighbor);
+    }
+  }
+  checkWin();
+}
+
 function floodReveal(startCell) {
   const queue = [startCell];
   const visited = new Set();
@@ -208,11 +227,9 @@ function floodReveal(startCell) {
     renderCell(cell);
 
     if (cell.adjacent === 0) {
-      for (const neighbor of neighbors(cell.row, cell.col)) {
-        if (!neighbor.revealed && !neighbor.flagged && !neighbor.mine) {
-          queue.push(neighbor);
-        }
-      }
+      neighbors(cell.row, cell.col).forEach((neighbor) => {
+        if (!neighbor.revealed && !neighbor.flagged && !neighbor.mine) queue.push(neighbor);
+      });
     }
   }
 }
@@ -222,7 +239,6 @@ function toggleFlag(row, col) {
 
   const cell = cells[row][col];
   if (cell.revealed) return;
-
   if (!cell.flagged && flags >= mineTotal) return;
 
   cell.flagged = !cell.flagged;
@@ -241,6 +257,7 @@ function revealAllMines() {
 }
 
 function loseGame() {
+  if (gameOver) return;
   gameOver = true;
   stopTimer();
   revealAllMines();
@@ -263,7 +280,11 @@ function checkWin() {
   });
 
   updateMineCounter();
-  messageElement.textContent = `🎉 You win in ${seconds} seconds!`;
+  const newRecord = saveBestTime();
+  updateBestTime();
+  messageElement.textContent = newRecord
+    ? `🏆 New record! You won in ${seconds} seconds!`
+    : `🎉 You win in ${seconds} seconds!`;
 }
 
 function newGame() {
@@ -281,10 +302,28 @@ function newGame() {
   timerElement.textContent = '0';
   messageElement.textContent = 'Click a cell to start.';
   updateMineCounter();
+  updateBestTime();
   buildBoard();
+}
+
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  const light = document.body.classList.contains('light');
+  localStorage.setItem('minesweeper-theme', light ? 'light' : 'dark');
+  themeToggle.textContent = light ? '🌙' : '☀️';
+  themeToggle.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
+}
+
+function loadTheme() {
+  const light = localStorage.getItem('minesweeper-theme') === 'light';
+  document.body.classList.toggle('light', light);
+  themeToggle.textContent = light ? '🌙' : '☀️';
+  themeToggle.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
 }
 
 difficultyElement.addEventListener('change', newGame);
 newGameButton.addEventListener('click', newGame);
+themeToggle.addEventListener('click', toggleTheme);
 
+loadTheme();
 newGame();
