@@ -1,67 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Minesweeper with difficulty levels, statistics, themes, sound, hints, pause, and a daily challenge.">
-  <title>Minesweeper</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Minesweeper progression game with XP, coins, missions, streaks and achievements."><title>Minesweeper — Super Major</title><link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <main class="game">
-    <header class="header">
-      <div>
-        <p class="eyebrow">CLASSIC PUZZLE</p>
-        <h1>💣 Minesweeper</h1>
-      </div>
-      <div class="header-actions">
-        <button id="theme-toggle" class="icon-button" type="button" aria-label="Toggle theme">☀️</button>
-        <button id="sound-toggle" class="icon-button" type="button" aria-label="Toggle sound">🔊</button>
-      </div>
-    </header>
-
-    <section class="controls" aria-label="Game controls">
-      <label for="difficulty">Difficulty</label>
-      <select id="difficulty">
-        <option value="easy">Easy · 9×9 · 10 mines</option>
-        <option value="medium">Medium · 16×16 · 40 mines</option>
-        <option value="hard">Hard · 16×30 · 99 mines</option>
-      </select>
-      <button id="new-game" type="button">New Game</button>
-      <button id="pause-game" type="button">⏸ Pause</button>
-      <button id="hint-button" type="button">💡 Hint</button>
-    </section>
-
-    <section class="status" aria-live="polite">
-      <div class="stat"><span>💣</span><strong id="mine-count">0</strong><small>MINES</small></div>
-      <div class="stat"><span>🚩</span><strong id="flag-count">0</strong><small>FLAGS</small></div>
-      <div class="stat"><span>⏱️</span><strong id="timer">0</strong><small>TIME</small></div>
-      <div class="stat"><span>🏆</span><strong id="best-time">—</strong><small>BEST</small></div>
-    </section>
-
-    <div id="message" class="message">Click a cell to start.</div>
-    <div id="board" class="board" role="grid" aria-label="Minesweeper board"></div>
-
-    <section class="instructions">
-      <p><strong>Left-click</strong> reveal · <strong>Right-click</strong> flag · <strong>Click a revealed number</strong> chord</p>
-      <p>Use Hint once per game. Pause hides the board and stops the timer.</p>
-    </section>
-
-    <section class="challenge" aria-label="Daily challenge">
-      <div>
-        <span class="challenge-label">DAILY CHALLENGE</span>
-        <strong id="daily-status">Ready</strong>
-      </div>
-      <button id="daily-button" type="button">Play Daily</button>
-    </section>
-
-    <section class="stats-panel" aria-label="Game statistics">
-      <div><span>Wins</span><strong id="wins">0</strong></div>
-      <div><span>Games</span><strong id="games">0</strong></div>
-      <div><span>Win rate</span><strong id="win-rate">0%</strong></div>
-    </section>
-  </main>
-
-  <script src="script.js"></script>
-</body>
-</html>
+<body><main class="game">
+<header class="header"><div><p class="eyebrow">MINESWEEPER • SUPER MAJOR</p><h1>💣 Minesweeper</h1><p class="subtitle">Clear boards. Earn XP. Build your streak. Unlock rewards.</p></div><div class="header-actions"><button id="theme-toggle" class="icon-button" type="button">☀️</button><button id="sound-toggle" class="icon-button" type="button">🔊</button></div></header>
+<section class="player-card"><div class="avatar">💣</div><div class="player-info"><div class="player-line"><strong>Mine Hunter</strong><span id="rank">Rookie</span></div><div class="level-line"><strong>LEVEL <span id="level">1</span></strong><span id="xp-text">0 / 100 XP</span></div><div class="xp-bar"><span id="xp-bar"></span></div></div><div class="wallet"><span>🪙</span><strong id="coins">0</strong><small>COINS</small></div><div class="streak"><span>🔥</span><strong id="streak">0</strong><small>STREAK</small></div></section>
+<nav class="tabs"><button class="tab active" data-tab="game" type="button">🎮 Play</button><button class="tab" data-tab="missions" type="button">🎯 Missions</button><button class="tab" data-tab="achievements" type="button">🏆 Achievements</button></nav>
+<section id="tab-game" class="tab-content active"><section class="controls"><label for="difficulty">Difficulty</label><select id="difficulty"><option value="easy">Easy · 9×9 · 10 mines</option><option value="medium">Medium · 16×16 · 40 mines</option><option value="hard">Hard · 16×30 · 99 mines</option></select><button id="new-game" type="button">New Game</button><button id="pause-game" type="button">⏸ Pause</button><button id="hint-button" type="button">💡 Hint</button></section>
+<section class="status"><div class="stat"><span>💣</span><strong id="mine-count">0</strong><small>MINES</small></div><div class="stat"><span>🚩</span><strong id="flag-count">0</strong><small>FLAGS</small></div><div class="stat"><span>⏱️</span><strong id="timer">0</strong><small>TIME</small></div><div class="stat"><span>🏆</span><strong id="best-time">—</strong><small>BEST</small></div></section><div id="message" class="message">Click a cell to start.</div><div id="board" class="board" role="grid" aria-label="Minesweeper board"></div>
+<section class="instructions"><p><strong>Left-click</strong> reveal · <strong>Right-click</strong> flag · <strong>Click a revealed number</strong> chord</p></section><section class="challenge"><div><span class="challenge-label">📅 DAILY CHALLENGE</span><strong id="daily-status">Ready</strong></div><button id="daily-button" type="button">Play Daily</button></section></section>
+<section id="tab-missions" class="tab-content"><div class="section-heading"><div><span class="eyebrow">TODAY</span><h2>🎯 Missions</h2></div><span>Resets daily</span></div><div id="missions-list" class="mission-list"></div></section>
+<section id="tab-achievements" class="tab-content"><div class="section-heading"><div><span class="eyebrow">PROGRESS</span><h2>🏆 Achievements</h2></div><strong id="achievement-count">0 / 8</strong></div><div id="achievements-list" class="achievement-list"></div></section>
+<section class="stats-panel"><div><span>Wins</span><strong id="wins">0</strong></div><div><span>Games</span><strong id="games">0</strong></div><div><span>Win rate</span><strong id="win-rate">0%</strong></div></section><footer><span>v3.0 • Super Major Update</span><span>Progress saved locally</span></footer>
+</main><script src="script.js"></script></body></html>
