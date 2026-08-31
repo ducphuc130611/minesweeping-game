@@ -3,31 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A classic browser Minesweeper game.">
   <title>Minesweeper</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="game">
-    <h1>Minesweeper</h1>
+    <header class="header">
+      <div>
+        <p class="eyebrow">CLASSIC PUZZLE</p>
+        <h1>💣 Minesweeper</h1>
+      </div>
+      <button id="theme-toggle" class="icon-button" type="button" aria-label="Toggle theme">☀️</button>
+    </header>
 
     <section class="controls" aria-label="Game controls">
       <label for="difficulty">Difficulty</label>
       <select id="difficulty">
-        <option value="easy">Easy</option>
-        <option value="medium">Medium</option>
-        <option value="hard">Hard</option>
+        <option value="easy">Easy · 9×9 · 10 mines</option>
+        <option value="medium">Medium · 16×16 · 40 mines</option>
+        <option value="hard">Hard · 16×30 · 99 mines</option>
       </select>
       <button id="new-game" type="button">New Game</button>
     </section>
 
     <section class="status" aria-live="polite">
-      <span>Mines: <strong id="mine-count">0</strong></span>
-      <span>Time: <strong id="timer">0</strong></span>
+      <div class="stat"><span>💣</span><strong id="mine-count">0</strong><small>MINES</small></div>
+      <div class="stat"><span>⏱️</span><strong id="timer">0</strong><small>TIME</small></div>
+      <div class="stat"><span>🏆</span><strong id="best-time">—</strong><small>BEST</small></div>
     </section>
 
     <div id="message" class="message">Click a cell to start.</div>
     <div id="board" class="board" role="grid" aria-label="Minesweeper board"></div>
-    <p class="help">Left-click to reveal. Right-click to flag.</p>
+
+    <section class="instructions">
+      <p><strong>Left-click</strong> reveal · <strong>Right-click</strong> flag</p>
+      <p>On a revealed number, click again to open its neighbors when the flags match.</p>
+    </section>
   </main>
 
   <script src="script.js"></script>
