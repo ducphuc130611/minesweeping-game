@@ -30,6 +30,23 @@ let seconds = 0;
 let timerId = null;
 let audioContext = null;
 
+function storageGet(key, fallback = null) {
+  try {
+    const value = localStorage.getItem(key);
+    return value === null ? fallback : value;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function storageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (_) {
+    // Storage is optional; gameplay must continue.
+  }
+}
+
 function createCell(row, col) {
   return { row, col, mine: false, revealed: false, flagged: false, adjacent: 0, element: null };
 }
@@ -43,39 +60,59 @@ function shuffle(array) {
 }
 
 function buildBoard() {
-  cells = Array.from({ length: rows }, (_, row) =>
-    Array.from({ length: cols }, (_, col) => createCell(row, col))
-  );
-
-  boardElement.innerHTML = '';
+  cells = [];
+  boardElement.replaceChildren();
   boardElement.style.gridTemplateColumns = `repeat(${cols}, 34px)`;
 
   for (let row = 0; row < rows; row++) {
+    const currentRow = [];
+
     for (let col = 0; col < cols; col++) {
+      const cell = createCell(row, col);
       const button = document.createElement('button');
+
       button.className = 'cell';
       button.type = 'button';
       button.setAttribute('role', 'gridcell');
-      button.setAttribute('aria-label', `Row ${row + 1}, column ${col + 1}`);
+      button.setAttribute('aria-label', `Hidden cell at row ${row + 1}, column ${col + 1}`);
       button.addEventListener('click', () => reveal(row, col));
       button.addEventListener('contextmenu', (event) => {
         event.preventDefault();
         toggleFlag(row, col);
       });
-      cells[row][col].element = button;
+
+      cell.element = button;
+      currentRow.push(cell);
       boardElement.appendChild(button);
     }
+
+    cells.push(currentRow);
   }
 }
 
 function neighbors(row, col) {
   const result = [];
+
   for (let dr = -1; dr <= 1; dr++) {
     for (let dc = -1; dc <= 1; dc++) {
       if (dr === 0 && dc === 0) continue;
+
       const r = row + dr;
       const c = col + dc;
-      if (r >= 0 && r < rows && c >= 0 && c < cols) result.push(cells[r][c]);
+      if (r >= 0 && r < rows && c >= 0 && c < cols) {
+        result.push(cells[r][c]);
+      }
+    }
+  }
+
+  return result;
+}
+
+function allCells() {
+  const result = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      result.push(cells[row][col]);
     }
   }
   return result;
@@ -83,26 +120,33 @@ function neighbors(row, col) {
 
 function placeMines(firstRow, firstCol) {
   const forbidden = new Set([`${firstRow},${firstCol}`]);
-  neighbors(firstRow, firstCol).forEach((cell) => forbidden.add(`${cell.row},${cell.col}`));
+  neighbors(firstRow, firstCol).forEach((cell) => {
+    forbidden.add(`${cell.row},${cell.col}`);
+  });
 
-  let candidates = cells.flat().filter((cell) => !forbidden.has(`${cell.row},${cell.col}`));
+  let candidates = allCells().filter((cell) => !forbidden.has(`${cell.row},${cell.col}`));
+
   if (candidates.length < mineTotal) {
-    candidates = cells.flat().filter((cell) => !(cell.row === firstRow && cell.col === firstCol));
+    candidates = allCells().filter((cell) => !(cell.row === firstRow && cell.col === firstCol));
   }
 
   shuffle(candidates);
-  for (let i = 0; i < mineTotal; i++) candidates[i].mine = true;
 
-  cells.flat().forEach((cell) => {
+  for (let i = 0; i < mineTotal && i < candidates.length; i++) {
+    candidates[i].mine = true;
+  }
+
+  allCells().forEach((cell) => {
     cell.adjacent = neighbors(cell.row, cell.col).filter((neighbor) => neighbor.mine).length;
   });
 }
 
 function startTimer() {
   if (timerId !== null) return;
+
   timerId = setInterval(() => {
     seconds++;
-    timerElement.textContent = seconds;
+    timerElement.textContent = String(seconds);
   }, 1000);
 }
 
@@ -114,13 +158,16 @@ function stopTimer() {
 }
 
 function updateCounters() {
-  mineCountElement.textContent = Math.max(0, mineTotal - flags);
-  flagCountElement.textContent = flags;
+  mineCountElement.textContent = String(Math.max(0, mineTotal - flags));
+  flagCountElement.textContent = String(flags);
 }
 
 function getBestTime() {
-  const value = localStorage.getItem(`minesweeper-best-${difficultyElement.value}`);
-  return value === null ? null : Number(value);
+  const value = storageGet(`minesweeper-best-${difficultyElement.value}`);
+  if (value === null) return null;
+
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 function updateBestTime() {
@@ -130,17 +177,19 @@ function updateBestTime() {
 
 function saveBestTime() {
   const best = getBestTime();
+
   if (best === null || seconds < best) {
-    localStorage.setItem(`minesweeper-best-${difficultyElement.value}`, String(seconds));
+    storageSet(`minesweeper-best-${difficultyElement.value}`, String(seconds));
     return true;
   }
+
   return false;
 }
 
 function getStats() {
   return {
-    games: Number(localStorage.getItem('minesweeper-games') || 0),
-    wins: Number(localStorage.getItem('minesweeper-wins') || 0)
+    games: Number(storageGet('minesweeper-games', '0')) || 0,
+    wins: Number(storageGet('minesweeper-wins', '0')) || 0
   };
 }
 
@@ -148,44 +197,53 @@ function updateStats(won) {
   const stats = getStats();
   stats.games++;
   if (won) stats.wins++;
-  localStorage.setItem('minesweeper-games', String(stats.games));
-  localStorage.setItem('minesweeper-wins', String(stats.wins));
+
+  storageSet('minesweeper-games', String(stats.games));
+  storageSet('minesweeper-wins', String(stats.wins));
   renderStats();
 }
 
 function renderStats() {
   const stats = getStats();
   const rate = stats.games === 0 ? 0 : Math.round((stats.wins / stats.games) * 100);
-  winsElement.textContent = stats.wins;
-  gamesElement.textContent = stats.games;
+
+  winsElement.textContent = String(stats.wins);
+  gamesElement.textContent = String(stats.games);
   winRateElement.textContent = `${rate}%`;
 }
 
 function soundEnabled() {
-  return localStorage.getItem('minesweeper-sound') !== 'off';
+  return storageGet('minesweeper-sound', 'on') !== 'off';
 }
 
 function playSound(type) {
   if (!soundEnabled()) return;
 
   try {
-    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioContext) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      audioContext = new AudioContextClass();
+    }
+
     if (audioContext.state === 'suspended') audioContext.resume();
 
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
     const frequencies = { reveal: 440, flag: 660, lose: 120, win: 880 };
+
     oscillator.frequency.value = frequencies[type] || 440;
     oscillator.type = type === 'lose' ? 'sawtooth' : 'sine';
     gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.06, audioContext.currentTime + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.12);
+
     oscillator.connect(gain);
     gain.connect(audioContext.destination);
     oscillator.start();
     oscillator.stop(audioContext.currentTime + 0.13);
   } catch (_) {
-    // Audio is optional; gameplay should continue if the browser blocks it.
+    // Audio is optional.
   }
 }
 
@@ -207,12 +265,13 @@ function renderCell(cell) {
   }
 
   element.classList.add('revealed');
+
   if (cell.mine) {
     element.classList.add('mine');
     element.textContent = '💣';
     element.setAttribute('aria-label', 'Mine');
   } else if (cell.adjacent > 0) {
-    element.textContent = cell.adjacent;
+    element.textContent = String(cell.adjacent);
     element.setAttribute('aria-label', `${cell.adjacent} adjacent mines`);
   } else {
     element.setAttribute('aria-label', 'Empty cell');
@@ -257,16 +316,18 @@ function chord(cell) {
   if (flagCount !== cell.adjacent) return;
 
   for (const neighbor of around) {
-    if (!neighbor.flagged && !neighbor.revealed) {
-      if (neighbor.mine) {
-        neighbor.revealed = true;
-        renderCell(neighbor);
-        loseGame();
-        return;
-      }
-      floodReveal(neighbor);
+    if (neighbor.flagged || neighbor.revealed) continue;
+
+    if (neighbor.mine) {
+      neighbor.revealed = true;
+      renderCell(neighbor);
+      loseGame();
+      return;
     }
+
+    floodReveal(neighbor);
   }
+
   playSound('reveal');
   checkWin();
 }
@@ -278,6 +339,7 @@ function floodReveal(startCell) {
   while (queue.length > 0) {
     const cell = queue.shift();
     const key = `${cell.row},${cell.col}`;
+
     if (visited.has(key) || cell.revealed || cell.flagged || cell.mine) continue;
 
     visited.add(key);
@@ -308,7 +370,7 @@ function toggleFlag(row, col) {
 }
 
 function revealAllMines() {
-  cells.flat().forEach((cell) => {
+  allCells().forEach((cell) => {
     if (cell.mine) {
       cell.revealed = true;
       renderCell(cell);
@@ -318,6 +380,7 @@ function revealAllMines() {
 
 function loseGame() {
   if (gameOver) return;
+
   gameOver = true;
   stopTimer();
   revealAllMines();
@@ -333,7 +396,7 @@ function checkWin() {
   gameOver = true;
   stopTimer();
 
-  cells.flat().forEach((cell) => {
+  allCells().forEach((cell) => {
     if (cell.mine && !cell.flagged) {
       cell.flagged = true;
       flags++;
@@ -346,6 +409,7 @@ function checkWin() {
   const newRecord = saveBestTime();
   updateBestTime();
   playSound('win');
+
   messageElement.textContent = newRecord
     ? `🏆 New record! You won in ${seconds} seconds!`
     : `🎉 You win in ${seconds} seconds!`;
@@ -353,6 +417,7 @@ function checkWin() {
 
 function newGame() {
   const difficulty = DIFFICULTIES[difficultyElement.value];
+
   rows = difficulty.rows;
   cols = difficulty.cols;
   mineTotal = difficulty.mines;
@@ -365,21 +430,24 @@ function newGame() {
   stopTimer();
   timerElement.textContent = '0';
   messageElement.textContent = 'Click a cell to start.';
+
+  // Always create the playable board before optional saved-data operations.
+  buildBoard();
   updateCounters();
   updateBestTime();
-  buildBoard();
 }
 
 function toggleTheme() {
   document.body.classList.toggle('light');
   const light = document.body.classList.contains('light');
-  localStorage.setItem('minesweeper-theme', light ? 'light' : 'dark');
+
+  storageSet('minesweeper-theme', light ? 'light' : 'dark');
   themeToggle.textContent = light ? '🌙' : '☀️';
   themeToggle.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
 }
 
 function loadTheme() {
-  const light = localStorage.getItem('minesweeper-theme') === 'light';
+  const light = storageGet('minesweeper-theme', 'dark') === 'light';
   document.body.classList.toggle('light', light);
   themeToggle.textContent = light ? '🌙' : '☀️';
   themeToggle.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
@@ -387,9 +455,10 @@ function loadTheme() {
 
 function toggleSound() {
   const enabled = soundEnabled();
-  localStorage.setItem('minesweeper-sound', enabled ? 'off' : 'on');
+  storageSet('minesweeper-sound', enabled ? 'off' : 'on');
   soundToggle.textContent = enabled ? '🔇' : '🔊';
   soundToggle.setAttribute('aria-label', enabled ? 'Enable sound' : 'Disable sound');
+
   if (!enabled) playSound('flag');
 }
 
