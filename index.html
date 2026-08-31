@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="A classic browser Minesweeper game with statistics, themes, flags, and safe first clicks.">
+  <meta name="description" content="Minesweeper with difficulty levels, statistics, themes, sound, hints, pause, and a daily challenge.">
   <title>Minesweeper</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -28,6 +28,8 @@
         <option value="hard">Hard · 16×30 · 99 mines</option>
       </select>
       <button id="new-game" type="button">New Game</button>
+      <button id="pause-game" type="button">⏸ Pause</button>
+      <button id="hint-button" type="button">💡 Hint</button>
     </section>
 
     <section class="status" aria-live="polite">
@@ -41,8 +43,16 @@
     <div id="board" class="board" role="grid" aria-label="Minesweeper board"></div>
 
     <section class="instructions">
-      <p><strong>Left-click</strong> reveal · <strong>Right-click</strong> flag</p>
-      <p>Click a revealed number to chord when the number of flags matches it.</p>
+      <p><strong>Left-click</strong> reveal · <strong>Right-click</strong> flag · <strong>Click a revealed number</strong> chord</p>
+      <p>Use Hint once per game. Pause hides the board and stops the timer.</p>
+    </section>
+
+    <section class="challenge" aria-label="Daily challenge">
+      <div>
+        <span class="challenge-label">DAILY CHALLENGE</span>
+        <strong id="daily-status">Ready</strong>
+      </div>
+      <button id="daily-button" type="button">Play Daily</button>
     </section>
 
     <section class="stats-panel" aria-label="Game statistics">
