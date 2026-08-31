@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="A classic browser Minesweeper game.">
+  <meta name="description" content="A classic browser Minesweeper game with statistics, themes, flags, and safe first clicks.">
   <title>Minesweeper</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -14,7 +14,10 @@
         <p class="eyebrow">CLASSIC PUZZLE</p>
         <h1>💣 Minesweeper</h1>
       </div>
-      <button id="theme-toggle" class="icon-button" type="button" aria-label="Toggle theme">☀️</button>
+      <div class="header-actions">
+        <button id="theme-toggle" class="icon-button" type="button" aria-label="Toggle theme">☀️</button>
+        <button id="sound-toggle" class="icon-button" type="button" aria-label="Toggle sound">🔊</button>
+      </div>
     </header>
 
     <section class="controls" aria-label="Game controls">
@@ -29,6 +32,7 @@
 
     <section class="status" aria-live="polite">
       <div class="stat"><span>💣</span><strong id="mine-count">0</strong><small>MINES</small></div>
+      <div class="stat"><span>🚩</span><strong id="flag-count">0</strong><small>FLAGS</small></div>
       <div class="stat"><span>⏱️</span><strong id="timer">0</strong><small>TIME</small></div>
       <div class="stat"><span>🏆</span><strong id="best-time">—</strong><small>BEST</small></div>
     </section>
@@ -38,7 +42,13 @@
 
     <section class="instructions">
       <p><strong>Left-click</strong> reveal · <strong>Right-click</strong> flag</p>
-      <p>On a revealed number, click again to open its neighbors when the flags match.</p>
+      <p>Click a revealed number to chord when the number of flags matches it.</p>
+    </section>
+
+    <section class="stats-panel" aria-label="Game statistics">
+      <div><span>Wins</span><strong id="wins">0</strong></div>
+      <div><span>Games</span><strong id="games">0</strong></div>
+      <div><span>Win rate</span><strong id="win-rate">0%</strong></div>
     </section>
   </main>
 
