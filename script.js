@@ -8,10 +8,15 @@ const boardElement = document.getElementById('board');
 const difficultyElement = document.getElementById('difficulty');
 const newGameButton = document.getElementById('new-game');
 const mineCountElement = document.getElementById('mine-count');
+const flagCountElement = document.getElementById('flag-count');
 const timerElement = document.getElementById('timer');
 const bestTimeElement = document.getElementById('best-time');
 const messageElement = document.getElementById('message');
 const themeToggle = document.getElementById('theme-toggle');
+const soundToggle = document.getElementById('sound-toggle');
+const winsElement = document.getElementById('wins');
+const gamesElement = document.getElementById('games');
+const winRateElement = document.getElementById('win-rate');
 
 let rows = 9;
 let cols = 9;
@@ -23,6 +28,7 @@ let revealedCount = 0;
 let flags = 0;
 let seconds = 0;
 let timerId = null;
+let audioContext = null;
 
 function createCell(row, col) {
   return { row, col, mine: false, revealed: false, flagged: false, adjacent: 0, element: null };
@@ -107,8 +113,9 @@ function stopTimer() {
   }
 }
 
-function updateMineCounter() {
+function updateCounters() {
   mineCountElement.textContent = Math.max(0, mineTotal - flags);
+  flagCountElement.textContent = flags;
 }
 
 function getBestTime() {
@@ -128,6 +135,58 @@ function saveBestTime() {
     return true;
   }
   return false;
+}
+
+function getStats() {
+  return {
+    games: Number(localStorage.getItem('minesweeper-games') || 0),
+    wins: Number(localStorage.getItem('minesweeper-wins') || 0)
+  };
+}
+
+function updateStats(won) {
+  const stats = getStats();
+  stats.games++;
+  if (won) stats.wins++;
+  localStorage.setItem('minesweeper-games', String(stats.games));
+  localStorage.setItem('minesweeper-wins', String(stats.wins));
+  renderStats();
+}
+
+function renderStats() {
+  const stats = getStats();
+  const rate = stats.games === 0 ? 0 : Math.round((stats.wins / stats.games) * 100);
+  winsElement.textContent = stats.wins;
+  gamesElement.textContent = stats.games;
+  winRateElement.textContent = `${rate}%`;
+}
+
+function soundEnabled() {
+  return localStorage.getItem('minesweeper-sound') !== 'off';
+}
+
+function playSound(type) {
+  if (!soundEnabled()) return;
+
+  try {
+    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') audioContext.resume();
+
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const frequencies = { reveal: 440, flag: 660, lose: 120, win: 880 };
+    oscillator.frequency.value = frequencies[type] || 440;
+    oscillator.type = type === 'lose' ? 'sawtooth' : 'sine';
+    gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.06, audioContext.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.12);
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.13);
+  } catch (_) {
+    // Audio is optional; gameplay should continue if the browser blocks it.
+  }
 }
 
 function renderCell(cell) {
@@ -166,8 +225,6 @@ function reveal(row, col) {
   const cell = cells[row][col];
   if (cell.flagged) return;
 
-  // Chording: clicking a revealed number opens its unflagged neighbors when
-  // the number of adjacent flags matches the number shown.
   if (cell.revealed) {
     chord(cell);
     return;
@@ -188,6 +245,7 @@ function reveal(row, col) {
   }
 
   floodReveal(cell);
+  playSound('reveal');
   checkWin();
 }
 
@@ -209,6 +267,7 @@ function chord(cell) {
       floodReveal(neighbor);
     }
   }
+  playSound('reveal');
   checkWin();
 }
 
@@ -244,7 +303,8 @@ function toggleFlag(row, col) {
   cell.flagged = !cell.flagged;
   flags += cell.flagged ? 1 : -1;
   renderCell(cell);
-  updateMineCounter();
+  updateCounters();
+  playSound('flag');
 }
 
 function revealAllMines() {
@@ -261,6 +321,8 @@ function loseGame() {
   gameOver = true;
   stopTimer();
   revealAllMines();
+  updateStats(false);
+  playSound('lose');
   messageElement.textContent = '💥 Game over! You hit a mine.';
 }
 
@@ -279,9 +341,11 @@ function checkWin() {
     }
   });
 
-  updateMineCounter();
+  updateCounters();
+  updateStats(true);
   const newRecord = saveBestTime();
   updateBestTime();
+  playSound('win');
   messageElement.textContent = newRecord
     ? `🏆 New record! You won in ${seconds} seconds!`
     : `🎉 You win in ${seconds} seconds!`;
@@ -301,7 +365,7 @@ function newGame() {
   stopTimer();
   timerElement.textContent = '0';
   messageElement.textContent = 'Click a cell to start.';
-  updateMineCounter();
+  updateCounters();
   updateBestTime();
   buildBoard();
 }
@@ -321,9 +385,26 @@ function loadTheme() {
   themeToggle.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
 }
 
+function toggleSound() {
+  const enabled = soundEnabled();
+  localStorage.setItem('minesweeper-sound', enabled ? 'off' : 'on');
+  soundToggle.textContent = enabled ? '🔇' : '🔊';
+  soundToggle.setAttribute('aria-label', enabled ? 'Enable sound' : 'Disable sound');
+  if (!enabled) playSound('flag');
+}
+
+function loadSound() {
+  const enabled = soundEnabled();
+  soundToggle.textContent = enabled ? '🔊' : '🔇';
+  soundToggle.setAttribute('aria-label', enabled ? 'Disable sound' : 'Enable sound');
+}
+
 difficultyElement.addEventListener('change', newGame);
 newGameButton.addEventListener('click', newGame);
 themeToggle.addEventListener('click', toggleTheme);
+soundToggle.addEventListener('click', toggleSound);
 
 loadTheme();
+loadSound();
+renderStats();
 newGame();
