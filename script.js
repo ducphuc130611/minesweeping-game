@@ -43,7 +43,7 @@ function storageSet(key, value) {
   try {
     localStorage.setItem(key, value);
   } catch (_) {
-    // Storage is optional; gameplay must continue.
+    // Optional storage must never break gameplay.
   }
 }
 
@@ -92,49 +92,32 @@ function buildBoard() {
 
 function neighbors(row, col) {
   const result = [];
-
   for (let dr = -1; dr <= 1; dr++) {
     for (let dc = -1; dc <= 1; dc++) {
       if (dr === 0 && dc === 0) continue;
-
       const r = row + dr;
       const c = col + dc;
-      if (r >= 0 && r < rows && c >= 0 && c < cols) {
-        result.push(cells[r][c]);
-      }
+      if (r >= 0 && r < rows && c >= 0 && c < cols) result.push(cells[r][c]);
     }
   }
-
   return result;
 }
 
 function allCells() {
-  const result = [];
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      result.push(cells[row][col]);
-    }
-  }
-  return result;
+  return cells.flat();
 }
 
 function placeMines(firstRow, firstCol) {
   const forbidden = new Set([`${firstRow},${firstCol}`]);
-  neighbors(firstRow, firstCol).forEach((cell) => {
-    forbidden.add(`${cell.row},${cell.col}`);
-  });
+  neighbors(firstRow, firstCol).forEach((cell) => forbidden.add(`${cell.row},${cell.col}`));
 
   let candidates = allCells().filter((cell) => !forbidden.has(`${cell.row},${cell.col}`));
-
   if (candidates.length < mineTotal) {
     candidates = allCells().filter((cell) => !(cell.row === firstRow && cell.col === firstCol));
   }
 
   shuffle(candidates);
-
-  for (let i = 0; i < mineTotal && i < candidates.length; i++) {
-    candidates[i].mine = true;
-  }
+  for (let i = 0; i < mineTotal && i < candidates.length; i++) candidates[i].mine = true;
 
   allCells().forEach((cell) => {
     cell.adjacent = neighbors(cell.row, cell.col).filter((neighbor) => neighbor.mine).length;
@@ -143,7 +126,6 @@ function placeMines(firstRow, firstCol) {
 
 function startTimer() {
   if (timerId !== null) return;
-
   timerId = setInterval(() => {
     seconds++;
     timerElement.textContent = String(seconds);
@@ -165,7 +147,6 @@ function updateCounters() {
 function getBestTime() {
   const value = storageGet(`minesweeper-best-${difficultyElement.value}`);
   if (value === null) return null;
-
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -177,12 +158,10 @@ function updateBestTime() {
 
 function saveBestTime() {
   const best = getBestTime();
-
   if (best === null || seconds < best) {
     storageSet(`minesweeper-best-${difficultyElement.value}`, String(seconds));
     return true;
   }
-
   return false;
 }
 
@@ -197,7 +176,6 @@ function updateStats(won) {
   const stats = getStats();
   stats.games++;
   if (won) stats.wins++;
-
   storageSet('minesweeper-games', String(stats.games));
   storageSet('minesweeper-wins', String(stats.wins));
   renderStats();
@@ -206,7 +184,6 @@ function updateStats(won) {
 function renderStats() {
   const stats = getStats();
   const rate = stats.games === 0 ? 0 : Math.round((stats.wins / stats.games) * 100);
-
   winsElement.textContent = String(stats.wins);
   gamesElement.textContent = String(stats.games);
   winRateElement.textContent = `${rate}%`;
@@ -225,19 +202,16 @@ function playSound(type) {
       if (!AudioContextClass) return;
       audioContext = new AudioContextClass();
     }
-
     if (audioContext.state === 'suspended') audioContext.resume();
 
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
     const frequencies = { reveal: 440, flag: 660, lose: 120, win: 880 };
-
     oscillator.frequency.value = frequencies[type] || 440;
     oscillator.type = type === 'lose' ? 'sawtooth' : 'sine';
     gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.06, audioContext.currentTime + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.12);
-
     oscillator.connect(gain);
     gain.connect(audioContext.destination);
     oscillator.start();
@@ -265,7 +239,6 @@ function renderCell(cell) {
   }
 
   element.classList.add('revealed');
-
   if (cell.mine) {
     element.classList.add('mine');
     element.textContent = '💣';
@@ -280,10 +253,8 @@ function renderCell(cell) {
 
 function reveal(row, col) {
   if (gameOver) return;
-
   const cell = cells[row][col];
   if (cell.flagged) return;
-
   if (cell.revealed) {
     chord(cell);
     return;
@@ -310,24 +281,20 @@ function reveal(row, col) {
 
 function chord(cell) {
   if (!started || cell.adjacent === 0) return;
-
   const around = neighbors(cell.row, cell.col);
   const flagCount = around.filter((neighbor) => neighbor.flagged).length;
   if (flagCount !== cell.adjacent) return;
 
   for (const neighbor of around) {
     if (neighbor.flagged || neighbor.revealed) continue;
-
     if (neighbor.mine) {
       neighbor.revealed = true;
       renderCell(neighbor);
       loseGame();
       return;
     }
-
     floodReveal(neighbor);
   }
-
   playSound('reveal');
   checkWin();
 }
@@ -339,7 +306,6 @@ function floodReveal(startCell) {
   while (queue.length > 0) {
     const cell = queue.shift();
     const key = `${cell.row},${cell.col}`;
-
     if (visited.has(key) || cell.revealed || cell.flagged || cell.mine) continue;
 
     visited.add(key);
@@ -357,7 +323,6 @@ function floodReveal(startCell) {
 
 function toggleFlag(row, col) {
   if (gameOver) return;
-
   const cell = cells[row][col];
   if (cell.revealed) return;
   if (!cell.flagged && flags >= mineTotal) return;
@@ -380,7 +345,6 @@ function revealAllMines() {
 
 function loseGame() {
   if (gameOver) return;
-
   gameOver = true;
   stopTimer();
   revealAllMines();
@@ -395,7 +359,6 @@ function checkWin() {
 
   gameOver = true;
   stopTimer();
-
   allCells().forEach((cell) => {
     if (cell.mine && !cell.flagged) {
       cell.flagged = true;
@@ -409,7 +372,6 @@ function checkWin() {
   const newRecord = saveBestTime();
   updateBestTime();
   playSound('win');
-
   messageElement.textContent = newRecord
     ? `🏆 New record! You won in ${seconds} seconds!`
     : `🎉 You win in ${seconds} seconds!`;
@@ -417,7 +379,6 @@ function checkWin() {
 
 function newGame() {
   const difficulty = DIFFICULTIES[difficultyElement.value];
-
   rows = difficulty.rows;
   cols = difficulty.cols;
   mineTotal = difficulty.mines;
@@ -430,8 +391,6 @@ function newGame() {
   stopTimer();
   timerElement.textContent = '0';
   messageElement.textContent = 'Click a cell to start.';
-
-  // Always create the playable board before optional saved-data operations.
   buildBoard();
   updateCounters();
   updateBestTime();
@@ -440,32 +399,24 @@ function newGame() {
 function toggleTheme() {
   document.body.classList.toggle('light');
   const light = document.body.classList.contains('light');
-
   storageSet('minesweeper-theme', light ? 'light' : 'dark');
   themeToggle.textContent = light ? '🌙' : '☀️';
-  themeToggle.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
 }
 
 function loadTheme() {
   const light = storageGet('minesweeper-theme', 'dark') === 'light';
   document.body.classList.toggle('light', light);
   themeToggle.textContent = light ? '🌙' : '☀️';
-  themeToggle.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
 }
 
 function toggleSound() {
   const enabled = soundEnabled();
   storageSet('minesweeper-sound', enabled ? 'off' : 'on');
   soundToggle.textContent = enabled ? '🔇' : '🔊';
-  soundToggle.setAttribute('aria-label', enabled ? 'Enable sound' : 'Disable sound');
-
-  if (!enabled) playSound('flag');
 }
 
 function loadSound() {
-  const enabled = soundEnabled();
-  soundToggle.textContent = enabled ? '🔊' : '🔇';
-  soundToggle.setAttribute('aria-label', enabled ? 'Disable sound' : 'Enable sound');
+  soundToggle.textContent = soundEnabled() ? '🔊' : '🔇';
 }
 
 difficultyElement.addEventListener('change', newGame);
