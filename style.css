@@ -59,6 +59,11 @@ body {
   margin-bottom: 18px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .eyebrow {
   margin: 0 0 3px;
   color: var(--muted);
@@ -119,7 +124,7 @@ button:hover {
 
 .status {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin-bottom: 12px;
 }
@@ -213,6 +218,32 @@ button:hover {
   margin: 4px 0;
 }
 
+.stats-panel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.stats-panel div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--panel-2);
+  border-radius: 10px;
+}
+
+.stats-panel span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.stats-panel strong {
+  font-size: 0.95rem;
+}
+
 @media (max-width: 560px) {
   body {
     padding: 10px;
@@ -230,10 +261,14 @@ button:hover {
   }
 
   .status {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .stat {
-    padding: 7px 5px;
+    padding: 7px 8px;
+  }
+
+  .stats-panel {
+    grid-template-columns: 1fr;
   }
 }
